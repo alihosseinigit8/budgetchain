@@ -73,15 +73,20 @@ type SimulatedValidator struct {
 func New() *Node {
 	budgetState := keeper.NewKeeper()
 	taxState := taxkeeper.NewKeeper()
-	budgetPrivate := chain.New(budgetState.StateRoot())
+
+	budgetPrivate := chain.New("BudgetPrivate", budgetState.StateRoot())
+	budgetPublic := chain.New("BudgetPublic", types.JSONDigest([]types.PublicBudgetRecord{}))
+	taxPrivate := chain.New("TaxPrivate", taxState.StateRoot())
+	taxPublic := chain.New("TaxPublic", types.JSONDigest([]types.PublicTaxRecord{}))
+
 	return &Node{
 		Keeper:              budgetState,
 		TaxKeeper:           taxState,
 		Contract:            contract.New(budgetState),
 		BudgetPrivate:       budgetPrivate,
-		BudgetPublic:        chain.New(types.JSONDigest([]types.PublicBudgetRecord{})),
-		TaxPrivate:          chain.New(taxState.StateRoot()),
-		TaxPublic:           chain.New(types.JSONDigest([]types.PublicTaxRecord{})),
+		BudgetPublic:        budgetPublic,
+		TaxPrivate:          taxPrivate,
+		TaxPublic:           taxPublic,
 		Chain:               budgetPrivate,
 		budgetPublicRecords: []types.PublicBudgetRecord{},
 		taxPublicRecords:    []types.PublicTaxRecord{},

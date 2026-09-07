@@ -133,10 +133,11 @@ func (k *Keeper) UpsertPolicy(actorID string, policy types.ApprovalPolicy, signa
 func (k *Keeper) SubmitSignedRequest(input types.BudgetRequestInput, signature string, taxStatus types.TaxStatusSnapshot) (*types.BudgetRequest, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
-
+	//validateRequest raises error if the request doesnt have it's necessary arguments.
 	if err := validateRequest(input); err != nil {
 		return nil, err
 	}
+	//if it's is not among other ids or it doesnt have roll it shows an error
 	requester, err := k.activeIdentityWithRoleLocked(input.OrganizationID, types.RoleRequester)
 	if err != nil {
 		return nil, err

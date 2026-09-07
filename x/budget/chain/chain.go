@@ -6,7 +6,7 @@ package chain
 import (
 	"bytes"
 	"fmt"
-
+	"os"
 	"budgetchain/x/budget/types"
 )
 
@@ -14,13 +14,17 @@ import (
 // and tax logic live in Keeper and Contract so the blockchain layer remains
 // separate from business rules.
 type Chain struct {
+	Name   string
 	Blocks []*types.Block
 }
 
 // New creates a ledger genesis block with its initial StateRoot. For example,
 // BudgetPrivate and TaxPrivate have independent genesis blocks and state roots.
-func New(stateRoot []byte) *Chain {
-	return &Chain{Blocks: []*types.Block{types.GenesisBlock(stateRoot)}}
+func New(name string, stateRoot []byte) *Chain {
+	return &Chain{
+		Name:   name,
+		Blocks: []*types.Block{types.GenesisBlock(stateRoot)},
+	}
 }
 
 // Tip returns the latest trusted block in the chain.
@@ -38,9 +42,33 @@ func (c *Chain) Commit(txs []types.Tx, stateRoot []byte) (*types.Block, error) {
 	tip := c.Tip()
 	b := types.NewBlock(tip.Header.Height+1, tip.Hash, stateRoot, txs)
 	c.Blocks = append(c.Blocks, b)
+
+	// ---  پرینت در کنسول ---
+	fmt.Printf("=> [COMMIT] Ledger: %-13s | Height: %d | Txs: %d\n", c.Name, b.Header.Height, len(txs))
+
+	// ---  نوشتن لاگ در فایل اختصاصی هر لجر ---
+	fileName := fmt.Sprintf("%s.log", c.Name) // مثلاً BudgetPrivate.log
+	
+	// باز کردن فایل در حالت Append (اگر نبود ساخته شود)
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err == nil {
+		defer file.Close()
+		
+		// نوشتن هدر بلاک
+		file.WriteString(fmt.Sprintf("=== Block %d | Hash: %x ===\n", b.Header.Height, b.Hash[:8]))
+		
+		// نوشتن جزئیات تک‌تک تراکنش‌های داخل بلاک
+		for i, tx := range txs {
+			// `%T` نوع تراکنش (مثلا TxBudgetDisclosure) و `%+v` مقادیر داخل آن را چاپ می‌کند
+			file.WriteString(fmt.Sprintf("  Tx [%d]: Type: %T \n  Data: %+v\n\n", i, tx, tx))
+		}
+		file.WriteString("------------------------------------------------------\n")
+	} else {
+		fmt.Printf("Error writing to file %s: %v\n", fileName, err)
+	}
+
 	return b, nil
 }
-
 // Verify checks ledger structural integrity: genesis, height progression,
 // prev_hash linkage, transaction roots, and block hashes. Simulated validators
 // use the same checks for new blocks.

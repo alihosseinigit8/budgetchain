@@ -80,6 +80,7 @@ func VerifySignature(encodedPublicKey string, payload []byte, encodedSignature s
 		return ErrInvalidSignature
 	}
 	digest := sha256.Sum256(payload)
+	//using ECDSA
 	if !ecdsa.VerifyASN1(publicKey, digest[:], sig) {
 		return ErrInvalidSignature
 	}
